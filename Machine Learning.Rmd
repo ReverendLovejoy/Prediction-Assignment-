@@ -1,0 +1,50 @@
+---
+title: "Prediction Assignment"
+author: "maplepawner"
+date: "February 1, 2016"
+output: html_document
+---
+
+__Steps taken:__
+```{R, include=FALSE}
+library(caret); library(randomForest); library(parallel); library(doParallel)
+cluster <- makeCluster(detectCores() - 1)
+registerDoParallel(cluster)
+pmlTraining <- read.csv("/Users/michaelruan/Documents/R/Practical Machine Learning/pml-training.csv")
+pmlTesting <- read.csv("/Users/michaelruan/Documents/R/Practical Machine Learning/pml-testing.csv")
+```
+
+__1. Remove columns largely populated with NAs__
+```{R}
+pmlTraining2 <- pmlTraining[,-c(1:6, 12:36, 50:59, 69:83, 87:101, 103:112, 125:139, 141:150)]
+```
+
+__2. Partition training dataset into two separate datasets, Training and Validation__
+```{R}
+inTrain = createDataPartition(pmlTraining2$classe, p = .7, list=FALSE)
+training <- pmlTraining2[inTrain,]; validation <- pmlTraining2[-inTrain,]
+```
+
+__3. Train random forest model with 10-fold cross-validation__
+```{R}
+fitControl <- trainControl(method = "cv",number = 10, allowParallel = TRUE)
+fit <- train(classe~., method="rf",data=training,trControl = fitControl)
+stopCluster(cluster)
+```
+
+__4. Use model to predict on validation set, obtained an accuracy of 99.69%. This was the highest of any model used, so it was retained for use on the Testing set__
+```{R}
+predictionTrain <- predict(fit, newdata=validation)
+accuracy <- sum(predictionTrain==validation$classe)/length(validation$classe)
+print(accuracy)
+```
+```{R, echo=FALSE}
+table(predictionTrain, validation$classe)
+```
+
+__6. The accuracy on the Testing set was 20/20__
+
+```{r}
+answers <- predict(fit, pmlTesting)
+print(answers)
+````
